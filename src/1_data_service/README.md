@@ -20,7 +20,7 @@ You can then start using it from http://127.0.0.1:8777
 # How to test its working?
 You can send a request through [curl](https://curl.se/)
 ```bash
-$ curl -X 'GET' \
+$ curl -X 'POST' \
   'http://localhost:8777/api/v1/animals/data' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \

@@ -18,3 +18,17 @@ This project is divided in 5 different components:
 3. Backend: API is configured to communicate ML model with frontend.
 4. Frontend: GUI is configured for the user to interact with the app.
 5. Containerization: A set of Dockers are created to easily deploy the project on other enviroments.
+
+# Docker commands
+
+## Minio
+```bash
+$ docker run -d \
+  --name challenge_minio \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  -v ./data/models:/data \
+  quay.io/minio/minio server /data --console-address ":9001"
+```

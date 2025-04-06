@@ -12,7 +12,8 @@ $ docker build -t py_challenge_data_service:latest .
 
 Then to run the API use:
 ```bash
-$ docker run -p 8777:8777 py_challenge_data_service:latest
+$ docker run -d --name challenge_data_service \
+-p 8777:8777 py_challenge_data_service:latest
 ```
 
 You can then start using it from http://127.0.0.1:8777

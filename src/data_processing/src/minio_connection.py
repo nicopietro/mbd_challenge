@@ -75,12 +75,13 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     return timestamp
 
 
-def minio_latest_model_timestamp_id() -> str | None:
+def minio_latest_model_timestamp_id() -> str:
     """
     Retrieves the latest timestamp ID stored in MinIO.
 
     :return: Most recent timestamp ID, or None if no models exist.
     :raises ConnectionError: If MinIO is not reachable.
+|   :raises IndexError: If no models are found in MinIO.
     """
 
     if not is_minio_online():
@@ -88,8 +89,12 @@ def minio_latest_model_timestamp_id() -> str | None:
 
     objects = client.list_objects('mpc', recursive=True)
     timestamps = set(obj.object_name.split('/')[0] for obj in objects)
+    try:
+        lastest_model_id = sorted(timestamps)[-1]
+    except IndexError:
+        raise IndexError("No models found in MinIO.")
 
-    return sorted(timestamps)[-1]
+    return lastest_model_id
 
 
 def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:

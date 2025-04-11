@@ -3,6 +3,7 @@ import json
 import os
 from minio import Minio
 import joblib
+import socket
 from sklearn.base import BaseEstimator
 
 client = Minio(
@@ -12,9 +13,40 @@ client = Minio(
     secure=False
 )
 
-def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
-    # TODO: Add documentation
+def is_minio_online() -> bool:
+    """
+    Checks if the MinIO server is reachable.
 
+    :param client: MinIO client instance.
+    :param timeout: Timeout in seconds for the check.
+    :return: True if MinIO is reachable, False otherwise.
+    """
+
+    old_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(5.0)
+
+    try:
+        _ = client.list_buckets()
+        return True
+    except Exception:
+        return False
+    finally:
+        socket.setdefaulttimeout(old_timeout)
+
+
+def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
+    """
+    Saves a model and optional metrics to MinIO.
+
+    :param model: Trained scikit-learn estimator.
+    :param metrics: Optional performance metrics to store.
+    :return: Model timestamp ID.
+    :raises ConnectionError: If MinIO is not reachable.
+    """
+
+    if not is_minio_online():
+        raise ConnectionError("MinIO server is not reachable.")
+    
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Create a bucket if it doesn't exist
@@ -43,18 +75,37 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     return timestamp
 
 
-def minio_latest_model_id() -> str | None:
-    # TODO: Add documentation
+def minio_latest_model_timestamp_id() -> str | None:
+    """
+    Retrieves the latest timestamp ID stored in MinIO.
+
+    :return: Most recent timestamp ID, or None if no models exist.
+    :raises ConnectionError: If MinIO is not reachable.
+    """
+
+    if not is_minio_online():
+        raise ConnectionError("MinIO server is not reachable.")
+
     objects = client.list_objects('mpc', recursive=True)
     timestamps = set(obj.object_name.split('/')[0] for obj in objects)
+
     return sorted(timestamps)[-1]
 
 
 def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:
-    # TODO: Add documentation
+    """
+    Downloads a model from MinIO given its timestamp.
+
+    :param model_timestamp: Timestamp ID of the model. If None, fetches the latest model.
+    :return: The deserialized scikit-learn model.
+    :raises ConnectionError: If MinIO is not reachable.
+    """
+
+    if not is_minio_online():
+        raise ConnectionError("MinIO server is not reachable.")
 
     if model_timestamp is None:
-        model_timestamp = minio_latest_model_id()
+        model_timestamp = minio_latest_model_timestamp_id()
 
     # Download model file
     client.fget_object('mpc', f'{model_timestamp}/model.joblib', 'model_file.joblib')
@@ -65,7 +116,7 @@ def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:
 
 
 if __name__ == '__main__':
-    lastest_model_id = minio_latest_model_id()
+    lastest_model_id = minio_latest_model_timestamp_id()
     model = minio_retreive_model()
     print(lastest_model_id)
     print()

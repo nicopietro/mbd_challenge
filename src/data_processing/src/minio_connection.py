@@ -17,8 +17,6 @@ def is_minio_online() -> bool:
     """
     Checks if the MinIO server is reachable.
 
-    :param client: MinIO client instance.
-    :param timeout: Timeout in seconds for the check.
     :return: True if MinIO is reachable, False otherwise.
     """
 
@@ -81,7 +79,7 @@ def minio_latest_model_timestamp_id() -> str:
 
     :return: Most recent timestamp ID, or None if no models exist.
     :raises ConnectionError: If MinIO is not reachable.
-|   :raises IndexError: If no models are found in MinIO.
+    :raises IndexError: If no models are found in MinIO.
     """
 
     if not is_minio_online():

@@ -12,12 +12,10 @@ def is_data_service_online() -> bool:
     socket.setdefaulttimeout(5.0)
 
     try:
-        if requests.post('http://localhost:8777/').status_code == 200:
+        with socket.create_connection(('localhost', '8777'), timeout=5.0):
             return True
-        else:
-            return False
-    finally:
-        socket.setdefaulttimeout(old_timeout)
+    except OSError:
+        return False
 
 def fetch_animals(datapoints: int, seed: int=42) -> tuple[dict, int]:
     """
@@ -63,6 +61,7 @@ def fetch_schema() -> tuple[dict, int]:
 
 
 if __name__ == "__main__":
+    print('Is data service Online?:', is_data_service_online())
     data = fetch_animals(10)
     schema = fetch_schema()
     print(data)

@@ -20,8 +20,8 @@ def is_minio_online() -> bool:
     :return: True if MinIO is reachable, False otherwise.
     """
     try:
-        host, port = client._endpoint.split(':')
-        with socket.create_connection((host, int(port)), timeout=5.0):
+        host, port = client._base_url.host.split(':')
+        with socket.create_connection((host, port), timeout=5.0):
             return True
     except Exception:
         return False
@@ -80,14 +80,12 @@ def minio_latest_model_timestamp_id() -> str:
     if not is_minio_online():
         raise ConnectionError('MinIO server is not reachable.')
 
-    objects = client.list_objects('mpc', recursive=True)
-    timestamps = set(obj.object_name.split('/')[0] for obj in objects)
-    try:
-        lastest_model_id = sorted(timestamps)[-1]
-    except IndexError:
+    objects = list(client.list_objects('mpc', recursive=True))
+    if not objects:
         raise IndexError('No models found in MinIO.')
 
-    return lastest_model_id
+    timestamps = set(obj.object_name.split('/')[0] for obj in objects)
+    return sorted(timestamps)[-1]
 
 
 def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:

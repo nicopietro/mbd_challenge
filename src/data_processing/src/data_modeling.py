@@ -4,10 +4,16 @@ from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.tree import DecisionTreeClassifier
-from api_call import fetch_animals
+from data_processing.src.api_call import fetch_animals
 
 def _remove_outliers_iqr(df: DataFrame) -> DataFrame:
-    # TODO: Add documentation (Interquartile range)
+    """
+    Removes outliers from numeric columns using the IQR (InterQuartile Range) method, grouped by animal type.
+
+    :param df: Input DataFrame containing animal features and labels.
+    :return: Filtered DataFrame with outliers removed.
+    """
+
     df_filtered = pd.DataFrame()
     cols_to_filter = ['height', 'weight']
 
@@ -36,7 +42,14 @@ def _remove_outliers_iqr(df: DataFrame) -> DataFrame:
 
 
 def prepare_animal_data_for_training(datapoints: int, seed: int=42) -> DataFrame:
-    # TODO: Add documentation
+    """
+    Generates and preprocesses animal data for training, including cleaning and labeling.
+
+    :param datapoints: Number of datapoints to fetch.
+    :param seed: Seed for random generation.
+    :return: Cleaned and labeled training DataFrame.
+    """
+
     df = pd.DataFrame(fetch_animals(datapoints=datapoints, seed=seed)[0])
     df['animal_type'] = None
 
@@ -57,7 +70,13 @@ def prepare_animal_data_for_training(datapoints: int, seed: int=42) -> DataFrame
 
 
 def train_animal_desicion_tree(df_cleaned: DataFrame) -> tuple[BaseEstimator, dict]:
-    # TODO: Add documentation
+    """
+    Trains a Decision Tree classifier using grid search and evaluates it.
+
+    :param df_cleaned: Preprocessed and labeled training data.
+    :return: Tuple with the best model (DesicionTree) and performance metrics.
+    """
+
     # Split data for training and testing
     X = df_cleaned[['height', 'weight', 'walks_on_n_legs', 'has_wings', 'has_tail']]
     y = df_cleaned['animal_type']
@@ -98,9 +117,3 @@ def train_animal_desicion_tree(df_cleaned: DataFrame) -> tuple[BaseEstimator, di
     }
 
     return model, metrics
-
-if __name__ == "__main__":
-    df_cleaned = prepare_animal_data_for_training(1000)
-    model, metrics = train_animal_desicion_tree(df_cleaned)
-    print(model.get_params())
-    print(metrics)

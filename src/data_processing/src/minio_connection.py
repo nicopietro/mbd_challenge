@@ -19,17 +19,12 @@ def is_minio_online() -> bool:
 
     :return: True if MinIO is reachable, False otherwise.
     """
-
-    old_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(5.0)
-
     try:
-        _ = client.list_buckets()
-        return True
+        host, port = client._endpoint.split(':')
+        with socket.create_connection((host, int(port)), timeout=5.0):
+            return True
     except Exception:
         return False
-    finally:
-        socket.setdefaulttimeout(old_timeout)
 
 
 def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
@@ -43,7 +38,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     """
 
     if not is_minio_online():
-        raise ConnectionError("MinIO server is not reachable.")
+        raise ConnectionError('MinIO server is not reachable.')
     
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -83,35 +78,40 @@ def minio_latest_model_timestamp_id() -> str:
     """
 
     if not is_minio_online():
-        raise ConnectionError("MinIO server is not reachable.")
+        raise ConnectionError('MinIO server is not reachable.')
 
     objects = client.list_objects('mpc', recursive=True)
     timestamps = set(obj.object_name.split('/')[0] for obj in objects)
     try:
         lastest_model_id = sorted(timestamps)[-1]
     except IndexError:
-        raise IndexError("No models found in MinIO.")
+        raise IndexError('No models found in MinIO.')
 
     return lastest_model_id
 
 
 def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:
     """
-    Downloads a model from MinIO given its timestamp.
+    Downloads a model from MinIO given its timestamp ID.
 
     :param model_timestamp: Timestamp ID of the model. If None, fetches the latest model.
     :return: The deserialized scikit-learn model.
     :raises ConnectionError: If MinIO is not reachable.
+    :raises FileNotFoundError: If the specified model does not exist.
     """
 
     if not is_minio_online():
-        raise ConnectionError("MinIO server is not reachable.")
+        raise ConnectionError('MinIO server is not reachable.')
 
     if model_timestamp is None:
         model_timestamp = minio_latest_model_timestamp_id()
 
     # Download model file
-    client.fget_object('mpc', f'{model_timestamp}/model.joblib', 'model_file.joblib')
+    try:
+        client.fget_object('mpc', f'{model_timestamp}/model.joblib', 'model_file.joblib')
+    except Exception as e:
+        raise FileNotFoundError('There is no model with {model_timestamp} timestamp ID.')
+    
     model = joblib.load('model_file.joblib')
     os.remove('model_file.joblib')
 
@@ -119,6 +119,7 @@ def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:
 
 
 if __name__ == '__main__':
+    print('Is minio Online?:', is_minio_online())
     lastest_model_id = minio_latest_model_timestamp_id()
     model = minio_retreive_model()
     print(lastest_model_id)

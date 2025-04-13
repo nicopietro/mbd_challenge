@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+
+  # Data Generator API
+  # Provides synthetic animal data for training
+  data-service:
+    build:
+      context: ./src/data_service
+    image: challenge_data_service:latest
+    container_name: data_service
+    ports:
+      - "8777:8777"
+
+  # MinIO Object Storage
+  # For storing ML models
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio_db
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - ./data/models:/data
+
+  # PostgreSQL Database 
+  # For storing user-generated data (Animal data and predictions)
+  postgres:
+    image: postgres:latest
+    container_name: postgre_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: challenge_db
+    volumes:
+      - ./data/user_generated_data:/var/lib/postgresql/data
+
+  # ML Microservice API
+  # Trains models and makes predictions using animal features
+  ml-service:
+    build:
+      context: ./src/ml_service
+    image: challenge_ml_service:latest
+    container_name: ml_service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - data-service
+      - minio

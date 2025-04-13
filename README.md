@@ -1,50 +1,49 @@
 # MBD_challenge
 Master’s in Big Data – Laboratory Challenge
 
-# Description
+## Description
 
-This project creates, deploys and manages a ML model to infer if an animal belong to any of these 4 possible types: Kangaroo, Elephant, Chicken, and Dog.
+This project creates, deploys and manages a ML model to infer if an animal belongs to any of these 4 possible types: Kangaroo, Elephant, Chicken, and Dog.
 
-# Quick Start
+The architecture is composed of modular microservices built using FastAPI. It also includes a PostgreSQL database to store data sent by users, MinIO for object storage, and is fully orchestrated using Docker Compose.
 
-TODO
+## Quick Start
 
-# Structure
+### 1. Prerequisites
 
-This project is divided in 5 different components:
+- Ensure [Docker](https://www.docker.com/) is installed and the Docker daemon is running.
 
-1. Data service: An external data service is deployed locally to retreive animal data.
-2. Data processing: Exploratory Data Analysis (EDA) is performed. All data manipulation and cleaning is done and a ML model is created and stored to be used later.
-3. Backend: API is configured to communicate ML model with frontend.
-4. Frontend: GUI is configured for the user to interact with the app.
-5. Containerization: A set of Dockers are created to easily deploy the project on other enviroments.
+### 2. Build and Start the System
 
-# Docker commands
+From the project root, run the following command to build and start all services:
 
-## Minio
-
-### bash
 ```bash
- docker run -d \
-  --name challenge_minio \
-  -p 9000:9000 \
-  -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin \
-  -e MINIO_ROOT_PASSWORD=minioadmin \
-  -v "/$(pwd):/data" \
-  quay.io/minio/minio server /data --console-address ":9001"
+docker compose up --build
 ```
 
-There's a known error in bash when it in on Windows. In that case the following powershell command is fully functional on windows.
+## Services Overview
 
-### Powershell
-```powershell
-docker run -d `
-  --name challenge_minio `
-  -p 9000:9000 `
-  -p 9001:9001 `
-  -e MINIO_ROOT_USER=minioadmin `
-  -e MINIO_ROOT_PASSWORD=minioadmin `
-  -v "${PWD}\data\models:/data" `
-  quay.io/minio/minio server /data --console-address ":9001"
-```
+### `data-service`
+- Generates synthetic animal data for training.
+- REST API accessible at: `http://localhost:8777`
+
+### `ml-service`
+- Exposes a REST API to train machine learning models and perform predictions.
+- Handles inference logic, model lifecycle management, and integrates with MinIO for model storage.
+- REST API accessible at: `http://localhost:8000`
+
+### `minio`
+- Acts as an object storage backend for saving trained models.
+- Console UI: `http://localhost:9001`
+- API: `http://localhost:9000`
+- Default credentials:
+  - Username: `minioadmin`
+  - Password: `minioadmin`
+
+### `postgres`
+- Stores user-generated and model-related data in a PostgreSQL database.
+- Exposed on port `5432`.
+- Default credentials:
+  - Username: `postgres`
+  - Password: `postgres`
+  - Database: `challenge_db`

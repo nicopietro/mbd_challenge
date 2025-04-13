@@ -7,7 +7,7 @@ import socket
 from sklearn.base import BaseEstimator
 
 client = Minio(
-    'localhost:9000',
+    'minio:9000',
     access_key='minioadmin',
     secret_key='minioadmin',
     secure=False

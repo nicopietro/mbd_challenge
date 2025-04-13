@@ -1,0 +1,28 @@
+[project]
+name = "py_challenge_ml_service"
+version = "0.1.0"
+description = "Animal classification microservice"
+authors = [{ name = "Nicolas Pietrocola", email = "nicolas.pietrocola@uma.es" }]
+license = "MIT"
+readme = "README.md"
+
+dependencies = [
+    "requests>=2.32.3",
+    "pandas>=2.2.3",
+    "scikit-learn>=1.6.1",
+    "joblib>=1.4.2",
+    "minio>=7.2.15",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.0",
+    "pydantic>=2.11.2"
+]
+
+[project.optional-dependencies]
+dev = ["ruff"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

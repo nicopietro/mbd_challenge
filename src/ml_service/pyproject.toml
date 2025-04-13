@@ -3,8 +3,6 @@ name = "py_challenge_ml_service"
 version = "0.1.0"
 description = "Animal classification microservice"
 authors = [{ name = "Nicolas Pietrocola", email = "nicolas.pietrocola@uma.es" }]
-license = "MIT"
-readme = "README.md"
 
 dependencies = [
     "requests>=2.32.3",

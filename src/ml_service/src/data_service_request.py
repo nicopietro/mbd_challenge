@@ -5,11 +5,8 @@ def is_data_service_online() -> bool:
     """
     Checks if the data service server is reachable.
 
-    :return: True if MinIO is reachable, False otherwise.
+    :return: True if Data Service is reachable, False otherwise.
     """
-
-    old_timeout = socket.getdefaulttimeout()
-    socket.setdefaulttimeout(5.0)
 
     try:
         with socket.create_connection(('localhost', '8777'), timeout=5.0):

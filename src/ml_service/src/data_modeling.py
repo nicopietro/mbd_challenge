@@ -4,7 +4,7 @@ from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.tree import DecisionTreeClassifier
-from data_processing.src.api_call import fetch_animals
+from src.data_service_request import fetch_animals
 
 def _remove_outliers_iqr(df: DataFrame) -> DataFrame:
     """

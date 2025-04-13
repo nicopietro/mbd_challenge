@@ -7,11 +7,11 @@ from pydantic import BaseModel
 from sklearn.base import BaseEstimator
 import pandas as pd
 
-from data_processing.src.api_call import is_data_service_online
-from data_processing.src.minio_connection import minio_retreive_model, minio_latest_model_timestamp_id, minio_save_model, is_minio_online
-from data_processing.src.data_modeling import prepare_animal_data_for_training, train_animal_desicion_tree
+from src.data_service_request import is_data_service_online
+from src.minio_connection import minio_retreive_model, minio_latest_model_timestamp_id, minio_save_model, is_minio_online
+from src.data_modeling import prepare_animal_data_for_training, train_animal_desicion_tree
 
-# To run in bash: PYTHONPATH=src uvicorn data_processing.api.app:app --reload
+# To run in bash: PYTHONPATH=src/ml_service uvicorn src.app:app --reload
 
 MODELS = {}
 DEFAULT_MODEL_ID = None

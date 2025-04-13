@@ -88,7 +88,7 @@ def minio_latest_model_timestamp_id() -> str:
     return sorted(timestamps)[-1]
 
 
-def minio_retreive_model(model_timestamp: str | None) -> BaseEstimator:
+def minio_retreive_model(model_timestamp: str | None = None) -> BaseEstimator:
     """
     Downloads a model from MinIO given its timestamp ID.
 

@@ -1,14 +1,17 @@
 import pandas as pd
 from pandas import DataFrame
 from sklearn.base import BaseEstimator
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.tree import DecisionTreeClassifier
+
 from src.data_service_request import fetch_animals
+
 
 def _remove_outliers_iqr(df: DataFrame) -> DataFrame:
     """
-    Removes outliers from numeric columns using the IQR (InterQuartile Range) method, grouped by animal type.
+    Removes outliers from numeric columns using the IQR (InterQuartile Range) method,
+    grouped by animal type.
 
     :param df: Input DataFrame containing animal features and labels.
     :return: Filtered DataFrame with outliers removed.
@@ -34,14 +37,14 @@ def _remove_outliers_iqr(df: DataFrame) -> DataFrame:
         filtered_count = len(group_filtered)
         removed = original_count - filtered_count
 
-        print(f"[{name}] Removed {removed} outlier(s) (kept {filtered_count} of {original_count})")
+        print(f'[{name}] Removed {removed} outlier(s) (kept {filtered_count} of {original_count})')
 
         df_filtered = pd.concat([df_filtered, group_filtered], ignore_index=True)
 
     return df_filtered
 
 
-def prepare_animal_data_for_training(datapoints: int, seed: int=42) -> DataFrame:
+def prepare_animal_data_for_training(datapoints: int, seed: int = 42) -> DataFrame:
     """
     Generates and preprocesses animal data for training, including cleaning and labeling.
 
@@ -55,12 +58,12 @@ def prepare_animal_data_for_training(datapoints: int, seed: int=42) -> DataFrame
 
     # Filter out impossible data combinations
     df = df[df['walks_on_n_legs'].isin([2, 4])]
-    df = df[~(df['walks_on_n_legs'] == 4) | (df['has_wings'] == False)]
-    df = df[df['has_tail'] == True]
+    df = df[~(df['walks_on_n_legs'] == 4) | (df['has_wings'] is False)]
+    df = df[df['has_tail'] is True]
 
     # Set animal_type based on the conditions
-    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] == True), 'animal_type'] = 'chicken'
-    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] == False), 'animal_type'] = 'kangaroo'
+    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] is True), 'animal_type'] = 'chicken'
+    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] is False), 'animal_type'] = 'kangaroo'
     df.loc[(df['weight'] >= 1500) & (df['animal_type'].isnull()), 'animal_type'] = 'elephant'
     df.loc[(df['weight'] < 1500) & (df['animal_type'].isnull()), 'animal_type'] = 'dog'
 
@@ -81,13 +84,15 @@ def train_animal_desicion_tree(df_cleaned: DataFrame) -> tuple[BaseEstimator, di
     X = df_cleaned[['height', 'weight', 'walks_on_n_legs', 'has_wings', 'has_tail']]
     y = df_cleaned['animal_type']
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
     # Create a grid serch to optimize a Desicion Tree Classifier
     param_grid = {
         'max_depth': [None, 3, 5, 10],
         'min_samples_split': [2, 5, 10],
-        'criterion': ['gini', 'entropy']
+        'criterion': ['gini', 'entropy'],
     }
 
     grid_search = GridSearchCV(
@@ -95,7 +100,7 @@ def train_animal_desicion_tree(df_cleaned: DataFrame) -> tuple[BaseEstimator, di
         param_grid=param_grid,
         scoring='f1_macro',
         cv=5,
-        n_jobs=-1
+        n_jobs=-1,
     )
 
     grid_search.fit(X_train, y_train)
@@ -110,10 +115,10 @@ def train_animal_desicion_tree(df_cleaned: DataFrame) -> tuple[BaseEstimator, di
     f1 = f1_score(y_test, y_predict, average='macro')
 
     metrics = {
-        "accuracy": round(acc, 4),
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1_score": round(f1, 4)
+        'accuracy': round(acc, 4),
+        'precision': round(precision, 4),
+        'recall': round(recall, 4),
+        'f1_score': round(f1, 4),
     }
 
     return model, metrics

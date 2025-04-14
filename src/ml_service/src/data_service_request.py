@@ -1,5 +1,7 @@
 import socket
+
 import requests
+
 
 def is_data_service_online() -> bool:
     """
@@ -14,7 +16,8 @@ def is_data_service_online() -> bool:
     except OSError:
         return False
 
-def fetch_animals(datapoints: int, seed: int=42) -> tuple[dict, int]:
+
+def fetch_animals(datapoints: int, seed: int = 42) -> tuple[dict, int]:
     """
     Fetches a list of animal datapoints from the data service API.
 
@@ -26,15 +29,12 @@ def fetch_animals(datapoints: int, seed: int=42) -> tuple[dict, int]:
     """
 
     if not is_data_service_online():
-        raise ConnectionError("Data Service server is not reachable.")
+        raise ConnectionError('Data Service server is not reachable.')
 
     if datapoints <= 0:
-        raise ValueError("Number of datapoints must be greater than zero.")
+        raise ValueError('Number of datapoints must be greater than zero.')
 
-    payload = {
-        "seed": seed,
-        "number_of_datapoints": datapoints
-        }
+    payload = {'seed': seed, 'number_of_datapoints': datapoints}
 
     response = requests.post('http://data-service:8777/api/v1/animals/data', json=payload)
     response.raise_for_status()
@@ -50,14 +50,14 @@ def fetch_schema() -> tuple[dict, int]:
     """
 
     if not is_data_service_online():
-        raise ConnectionError("Data Service server is not reachable.")
+        raise ConnectionError('Data Service server is not reachable.')
 
     response = requests.get('http://data-service:8777/api/v1/animals/schema')
     response.raise_for_status()
     return response.json(), response.status_code
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('Is data service Online?:', is_data_service_online())
     data = fetch_animals(10)
     schema = fetch_schema()

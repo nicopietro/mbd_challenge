@@ -18,6 +18,19 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["ruff"]
 
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+fixable = ["ALL"]
+extend-select = ["I"]
+
+[tool.ruff.format]
+quote-style = "single"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

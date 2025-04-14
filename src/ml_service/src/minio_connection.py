@@ -1,17 +1,14 @@
-from datetime import datetime
 import json
 import os
-from minio import Minio
-import joblib
 import socket
+from datetime import datetime
+
+import joblib
+from minio import Minio
 from sklearn.base import BaseEstimator
 
-client = Minio(
-    'minio:9000',
-    access_key='minioadmin',
-    secret_key='minioadmin',
-    secure=False
-)
+client = Minio('minio:9000', access_key='minioadmin', secret_key='minioadmin', secure=False)
+
 
 def is_minio_online() -> bool:
     """
@@ -39,7 +36,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
 
     if not is_minio_online():
         raise ConnectionError('MinIO server is not reachable.')
-    
+
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Create a bucket if it doesn't exist
@@ -49,7 +46,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     with open('model_file.joblib', mode='wb') as file_:
         joblib.dump(model, file_)
 
-    # Save model 
+    # Save model
     client.fput_object('mpc', f'{timestamp}/model.joblib', 'model_file.joblib')
 
     # If included, save model metrics & more information
@@ -107,9 +104,9 @@ def minio_retreive_model(model_timestamp: str | None = None) -> BaseEstimator:
     # Download model file
     try:
         client.fget_object('mpc', f'{model_timestamp}/model.joblib', 'model_file.joblib')
-    except Exception as e:
+    except Exception:
         raise FileNotFoundError('There is no model with {model_timestamp} timestamp ID.')
-    
+
     model = joblib.load('model_file.joblib')
     os.remove('model_file.joblib')
 

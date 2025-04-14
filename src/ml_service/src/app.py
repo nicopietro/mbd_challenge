@@ -52,6 +52,14 @@ app = FastAPI(
     version='0.4.0'
 )
 
+# TODO: Add endpoint to delete a model from MinIO and cache
+# TODO: Add enpoint to list all models in MinIO and cache
+# TODO: Add enpoint to save user_generated data into Postgres
+# TODO: Add enpoint to retrieve user_generated data and use it for training
+# TODO: Only for app (al least for now), create 5 unit tests and measure coverage
+# TODO: Add linter and formatter, also check how to automate
+
+
 @app.post('/api/v1/mpc/predict', tags=['Machine Learning'], summary='Predict animal type', description='Predicts the animal type for a list of animal feature inputs using a trained model.')
 def predict(
     animals: List[Animal],

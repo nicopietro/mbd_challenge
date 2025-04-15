@@ -58,12 +58,12 @@ def prepare_animal_data_for_training(datapoints: int, seed: int = 42) -> DataFra
 
     # Filter out impossible data combinations
     df = df[df['walks_on_n_legs'].isin([2, 4])]
-    df = df[~(df['walks_on_n_legs'] == 4) | (df['has_wings'] is False)]
-    df = df[df['has_tail'] is True]
+    df = df[~(df['walks_on_n_legs'] == 4) | (~df['has_wings'])]
+    df = df[df['has_tail']]
 
     # Set animal_type based on the conditions
-    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] is True), 'animal_type'] = 'chicken'
-    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] is False), 'animal_type'] = 'kangaroo'
+    df.loc[(df['walks_on_n_legs'] == 2) & (df['has_wings'] ), 'animal_type'] = 'chicken'
+    df.loc[(df['walks_on_n_legs'] == 2) & (~df['has_wings']), 'animal_type'] = 'kangaroo'
     df.loc[(df['weight'] >= 1500) & (df['animal_type'].isnull()), 'animal_type'] = 'elephant'
     df.loc[(df['weight'] < 1500) & (df['animal_type'].isnull()), 'animal_type'] = 'dog'
 

@@ -53,3 +53,15 @@ services:
     depends_on:
       - data-service
       - minio
+
+  # ML Microservice UI
+  # A Streamlit UI for the ML microservice
+  user-interface:
+    build:
+      context: ./src/user_interface
+    image: challenge_user_interface:latest
+    container_name: user_interface
+    ports:
+      - "8501:8501"
+    depends_on:
+      - ml-service

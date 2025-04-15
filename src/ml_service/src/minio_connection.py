@@ -64,25 +64,35 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
 
     return timestamp
 
+def minio_all_model_timestamps() -> list[str]:
+    """
+    Lists all model timestamp IDs stored in the 'mpc' bucket on MinIO.
+
+    :return: List of model timestamp strings.
+    :raises ConnectionError: If MinIO is not reachable.
+    """
+    if not is_minio_online():
+        raise ConnectionError("MinIO server is not reachable.")
+
+    objects = list(client.list_objects("mpc", recursive=True))
+    if not objects:
+        return []
+
+    return sorted({obj.object_name.split("/")[0] for obj in objects})
 
 def minio_latest_model_timestamp_id() -> str:
     """
     Retrieves the latest timestamp ID stored in MinIO.
 
-    :return: Most recent timestamp ID, or None if no models exist.
+    :return: Most recent timestamp ID.
     :raises ConnectionError: If MinIO is not reachable.
     :raises IndexError: If no models are found in MinIO.
     """
+    timestamps = minio_all_model_timestamps()
+    if not timestamps:
+        raise IndexError("No models found in MinIO.")
 
-    if not is_minio_online():
-        raise ConnectionError('MinIO server is not reachable.')
-
-    objects = list(client.list_objects('mpc', recursive=True))
-    if not objects:
-        raise IndexError('No models found in MinIO.')
-
-    timestamps = set(obj.object_name.split('/')[0] for obj in objects)
-    return sorted(timestamps)[-1]
+    return timestamps[-1]
 
 
 def minio_retreive_model(model_timestamp: str | None = None) -> BaseEstimator:

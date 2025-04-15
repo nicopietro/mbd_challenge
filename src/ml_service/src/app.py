@@ -11,6 +11,7 @@ from src.data_modeling import prepare_animal_data_for_training, train_animal_des
 from src.data_service_request import is_data_service_online
 from src.minio_connection import (
     is_minio_online,
+    minio_all_model_timestamps,
     minio_latest_model_timestamp_id,
     minio_retreive_model,
     minio_save_model,
@@ -65,6 +66,26 @@ app = FastAPI(
 # TODO: Add enpoint to save user_generated data into Postgres
 # TODO: Add enpoint to retrieve user_generated data and use it for training
 # TODO: Only for app (al least for now), create 5 unit tests and measure coverage
+
+@app.get(
+    '/api/v1/mpc/models',
+    tags=['Machine Learning'],
+    summary='List all models',
+    description='Retrieves a list of all model timestamp IDs stored in MinIO.'
+)
+def list_models():
+    """
+    Endpoint to list all trained model timestamps stored in MinIO.
+
+    :return: JSON response with a list of model IDs or error message.
+    """
+    try:
+        model_ids = minio_all_model_timestamps()
+        return JSONResponse(status_code=200, content={'models': model_ids})
+    except ConnectionError as e:
+        return JSONResponse(status_code=503, content={'error': str(e)})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={'error': str(e)})
 
 
 @app.post(

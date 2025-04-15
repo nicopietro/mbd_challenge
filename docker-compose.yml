@@ -65,3 +65,5 @@ services:
       - "8501:8501"
     depends_on:
       - ml-service
+    environment:
+    - ML_API_HOST=http://ml-service:8000

@@ -4,7 +4,7 @@ import pandas as pd
 from annotated_types import Gt
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sklearn.base import BaseEstimator
 
 from src.data_modeling import prepare_animal_data_for_training, train_animal_desicion_tree
@@ -29,6 +29,7 @@ class Animal(BaseModel):
     has_wings: bool
     has_tail: bool
 
+AnimalList = Annotated[list[Animal], Field(min_length=1)]
 
 def load_model(model_timestamp: str | None) -> BaseEstimator:
     """
@@ -64,7 +65,6 @@ app = FastAPI(
 # TODO: Add enpoint to save user_generated data into Postgres
 # TODO: Add enpoint to retrieve user_generated data and use it for training
 # TODO: Only for app (al least for now), create 5 unit tests and measure coverage
-# TODO: Add linter and formatter, also check how to automate
 
 
 @app.post(
@@ -74,7 +74,7 @@ app = FastAPI(
     description='Predicts the animal type for a list of animal feature inputs using a trained model.',
 )
 def predict(
-    animals: List[Animal],
+    animals: AnimalList,
     model_timestamp: str | None = Query(
         default=None,
         description='Optional model timestamp, if not specified, latests model will be used',

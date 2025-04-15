@@ -1,9 +1,10 @@
 import streamlit as st
 
-from ml_service_requests import check_api_health
+st.set_page_config(page_title="Animal ML App", page_icon="🐾")
 
-st.title("Animal Prediction App")
-
-if st.button("Check API Health"):
-    health_status = check_api_health()
-    st.json(health_status)
+pg = st.navigation([
+    st.Page("pages/0_home.py", title="Home", icon="🏠"),
+    st.Page("pages/1_predict.py", title="Predict", icon="📈"),
+    st.Page("pages/2_train.py", title="Train", icon="🧠"),
+])
+pg.run()

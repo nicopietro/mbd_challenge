@@ -1,7 +1,14 @@
+import os
 import socket
 
+from urllib.parse import urlparse
 import requests
 
+DATA_SERVICE_API_HOST = os.getenv('DATA_SERVICE_API_HOST', 'http://localhost:8777')
+
+parsed_url = urlparse(DATA_SERVICE_API_HOST)
+host = parsed_url.hostname
+port = parsed_url.port
 
 def is_data_service_online() -> bool:
     """
@@ -11,7 +18,7 @@ def is_data_service_online() -> bool:
     """
 
     try:
-        with socket.create_connection(('data-service', '8777'), timeout=5.0):
+        with socket.create_connection((host, port), timeout=5.0):
             return True
     except OSError:
         return False
@@ -36,7 +43,7 @@ def fetch_animals(datapoints: int, seed: int = 42) -> tuple[dict, int]:
 
     payload = {'seed': seed, 'number_of_datapoints': datapoints}
 
-    response = requests.post('http://data-service:8777/api/v1/animals/data', json=payload)
+    response = requests.post(f'{DATA_SERVICE_API_HOST}/api/v1/animals/data', json=payload)
     response.raise_for_status()
     return response.json(), response.status_code
 
@@ -52,7 +59,7 @@ def fetch_schema() -> tuple[dict, int]:
     if not is_data_service_online():
         raise ConnectionError('Data Service server is not reachable.')
 
-    response = requests.get('http://data-service:8777/api/v1/animals/schema')
+    response = requests.get(f'{DATA_SERVICE_API_HOST}/api/v1/animals/schema')
     response.raise_for_status()
     return response.json(), response.status_code
 

@@ -15,7 +15,12 @@ docker build -t ml-service .
 ```
 ### To launch
 ```bash
-docker run -d -p 8000:8000 --name challenge_ml_service ml-service
+docker run -d \
+  --name challenge_ml_service ml-service \
+  -p 8000:8000 \
+  -e MINIO_HOST=host.docker.internal:9000 \
+  -e DATA_SERVICE_API_HOST=http://host.docker.internal:8777 \
+  
 ```
 
 ## Posgres

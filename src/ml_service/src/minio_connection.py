@@ -7,7 +7,9 @@ import joblib
 from minio import Minio
 from sklearn.base import BaseEstimator
 
-client = Minio('minio:9000', access_key='minioadmin', secret_key='minioadmin', secure=False)
+MINIO_HOST = os.getenv('MINIO_HOST', 'localhost:9000')
+
+client = Minio(MINIO_HOST, access_key='minioadmin', secret_key='minioadmin', secure=False)
 
 
 def is_minio_online() -> bool:

@@ -53,6 +53,9 @@ services:
     depends_on:
       - data-service
       - minio
+    environment:
+    - DATA_SERVICE_API_HOST=http://data-service:8777
+    - MINIO_HOST=minio:9000
 
   # ML Microservice UI
   # A Streamlit UI for the ML microservice

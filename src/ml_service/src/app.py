@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from typing import Annotated, List
 
 import pandas as pd
@@ -16,6 +18,12 @@ from src.minio_connection import (
     minio_retreive_model,
     minio_save_model,
 )
+from src.postgres_connection import (
+    get_animals_between,
+    insert_animals,
+    is_postgres_online,
+    wait_for_postgres,
+)
 
 # To run in bash: PYTHONPATH=src/ml_service uvicorn src.app:app --reload
 
@@ -24,13 +32,17 @@ DEFAULT_MODEL_ID = None
 
 
 class Animal(BaseModel):
-    height: Annotated[float, Gt(0)]
-    weight: Annotated[float, Gt(0)]
-    walks_on_n_legs: Annotated[int, Gt(0)]
-    has_wings: bool
-    has_tail: bool
+    height: Annotated[float, Gt(0)] = Field(..., description='Height in meters')
+    weight: Annotated[float, Gt(0)] = Field(..., description='Weight in kilograms')
+    walks_on_n_legs: Annotated[int, Gt(0)] = Field(
+        ..., description='Number of legs used for walking'
+    )
+    has_wings: bool = Field(..., description='Whether the animal has wings')
+    has_tail: bool = Field(..., description='Whether the animal has a tail')
 
-AnimalList = Annotated[list[Animal], Field(min_length=1)]
+
+AnimalList = Annotated[List[Animal], Field(min_length=1)]
+
 
 def load_model(model_timestamp: str | None) -> BaseEstimator:
     """
@@ -55,10 +67,17 @@ def load_model(model_timestamp: str | None) -> BaseEstimator:
     return MODELS[model_timestamp]
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    wait_for_postgres()
+    yield  # Startup complete
+
+
 app = FastAPI(
     title='Animal Classifier API',
     description='API for classifying animals based on their features',
     version='0.4.0',
+    lifespan=lifespan,
 )
 
 # TODO: Add endpoint to delete a model from MinIO and cache
@@ -67,11 +86,12 @@ app = FastAPI(
 # TODO: Add enpoint to retrieve user_generated data and use it for training
 # TODO: Only for app (al least for now), create 5 unit tests and measure coverage
 
+
 @app.get(
     '/api/v1/mpc/models',
     tags=['Machine Learning'],
     summary='List all models',
-    description='Retrieves a list of all model timestamp IDs stored in MinIO.'
+    description='Retrieves a list of all model timestamp IDs stored in MinIO.',
 )
 def list_models():
     """
@@ -86,6 +106,91 @@ def list_models():
         return JSONResponse(status_code=503, content={'error': str(e)})
     except Exception as e:
         return JSONResponse(status_code=500, content={'error': str(e)})
+
+
+@app.post(
+    '/api/v1/mpc/train/synthetic',
+    tags=['Machine Learning'],
+    summary='Train a new model from synthetic data',
+    description='Trains a new model using simulated animal data and saves it to MinIO.',
+)
+def traing_new_model(datapoints: int, seed: int = 42):
+    """
+    Trains a new model using simulated animal data and saves it to MinIO.
+
+    :param datapoints: Number of synthetic datapoints to generate for training (must be > 0).
+    :param seed: Random seed for data generation (default is 42).
+    :return: JSON response with training status, model timestamp, and metrics.
+    """
+
+    if datapoints < 1:
+        return JSONResponse(
+            status_code=422, content={'error': 'Number of datapoints must be greater than 0.'}
+        )
+
+    df_cleaned = prepare_animal_data_for_training(datapoints=datapoints, seed=seed)
+
+    try:
+        model, metrics = train_animal_desicion_tree(df_cleaned)
+    except ValueError as e:
+        return JSONResponse(status_code=422, content={'error': str(e)})
+
+    timestamp = minio_save_model(model=model, metrics=metrics)
+
+    return JSONResponse(
+        status_code=200,
+        content={'status': 'Ok', 'trained_model_id': timestamp, 'model_metrics': metrics},
+    )
+
+
+@app.post(
+    '/api/v1/mpc/train/userdata',
+    tags=['Machine Learning'],
+    summary='Train a new model from stored data',
+    description="""Trains a new model using stored animal data in PostgreSQL
+    between two timestamps and saves it to MinIO.""",
+)
+def train_model_from_stored_data(
+    start: datetime = Query(
+        default=datetime.now(),
+        description='Start timestamp in ISO format',
+        example='2025-04-20T12:00:00',
+    ),
+    end: datetime = Query(
+        default=datetime.now() - timedelta(days=7),
+        description='End timestamp in ISO format',
+        example='2025-04-20T12:00:00',
+    ),
+):
+    """
+    Trains a model using real stored animal data from PostgreSQL between two timestamps.
+
+    :param start: Start datetime (inclusive).
+    :param end: End datetime (inclusive).
+    :return: JSON response with training status, model timestamp, and metrics.
+    """
+    try:
+        records = get_animals_between(start, end)
+    except ValueError as e:
+        return JSONResponse(status_code=503, content={'error': str(e)})
+
+    if not records:
+        return JSONResponse(
+            status_code=404,
+            content={'error': 'No data found in the specified time range.'},
+        )
+
+    try:
+        model, metrics = train_animal_desicion_tree(pd.DataFrame(records))
+    except ValueError as e:
+        return JSONResponse(status_code=422, content={'error': str(e)})
+
+    timestamp = minio_save_model(model=model, metrics=metrics)
+
+    return JSONResponse(
+        status_code=200,
+        content={'status': 'Ok', 'trained_model_id': timestamp, 'model_metrics': metrics},
+    )
 
 
 @app.post(
@@ -128,53 +233,67 @@ def predict(
         result['animal_type'] = pred
         results.append(result)
 
-    return JSONResponse(status_code=200, content={'prediction': results})
-
-
-@app.post(
-    '/api/v1/mpc/train',
-    tags=['Machine Learning'],
-    summary='Train a new model',
-    description='Trains a new model using simulated animal data and saves it to MinIO.',
-)
-def traing_new_model(datapoints: int, seed: int = 42):
-    """
-    Trains a new model using simulated animal data and saves it to MinIO.
-
-    :param datapoints: Number of synthetic datapoints to generate for training (must be > 0).
-    :param seed: Random seed for data generation (default is 42).
-    :return: JSON response with training status, model timestamp, and metrics.
-    """
-
-    if datapoints < 1:
-        return JSONResponse(
-            status_code=422, content={'error': 'Number of datapoints must be greater than 0.'}
-        )
-
-    df_cleaned = prepare_animal_data_for_training(datapoints=datapoints, seed=seed)
-    model, metrics = train_animal_desicion_tree(df_cleaned)
-    timestamp = minio_save_model(model=model, metrics=metrics)
+    db_status = 'saved into postgresql'
+    if not insert_animals(results):
+        db_status = 'save to postgresql failed'
 
     return JSONResponse(
-        status_code=200,
-        content={'status': 'Ok', 'trained_model_id': timestamp, 'model_metrics': metrics},
+        status_code=200, content={'prediction': results, 'database_status': db_status}
     )
+
+
+@app.get(
+    '/api/v1/mpc/animals',
+    tags=['Database'],
+    summary='Retrieve stored animals',
+    description='Returns all animal records stored in the database between two timestamps.',
+)
+def read_animals_between(
+    start: datetime = Query(
+        default=datetime.now(),
+        description='Start timestamp in ISO format',
+        example='2025-04-20T12:00:00',
+    ),
+    end: datetime = Query(
+        default=datetime.now() - timedelta(days=7),
+        description='End timestamp in ISO format',
+        example='2025-04-20T12:00:00',
+    ),
+) -> List[dict]:
+    """
+    API endpoint to retrieve animal records stored between two datetimes.
+
+    :param start: Start datetime (inclusive).
+    :param end: End datetime (inclusive).
+    :return: List of animal records.
+    """
+    try:
+        return get_animals_between(start, end)
+    except ValueError as e:
+        return JSONResponse(status_code=503, content={'error': str(e)})
 
 
 @app.get(
     '/health',
     tags=['Health'],
     summary='Health check',
-    description='Checks the health of the service and its dependencies (MinIO and Data Service API).',
+    description="""Checks the health of the service and its dependencies
+    (MinIO, PostgreSQL and Data Service API).""",
 )
 def health_check():
     """
-    Health check endpoint to validate service dependencies (MinIO and Data Service API).
+    Health check endpoint to validate service dependencies
+    (MinIO, PostgreSQL and Data Service API).
 
     :return: JSON response indicating system and dependency health.
     """
 
-    status = {'status': 'ok', 'minio': 'unknown', 'data_service_api': 'unknown'}
+    status = {
+        'status': 'ok',
+        'minio': 'unknown',
+        'postresql': 'unknown',
+        'data_service_api': 'unknown',
+    }
 
     # Check MinIO
     if is_minio_online():
@@ -188,6 +307,13 @@ def health_check():
         status['data_service_api'] = 'reachable'
     else:
         status['data_service_api'] = 'unreachable: Is data service running?'
+        status['status'] = 'error'
+
+    # Check PostgreSQL
+    if is_postgres_online():
+        status['postresql'] = 'reachable'
+    else:
+        status['postresql'] = 'unreachable: Is PostgreSQL running?'
         status['status'] = 'error'
 
     return status

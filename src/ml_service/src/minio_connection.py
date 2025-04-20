@@ -66,6 +66,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
 
     return timestamp
 
+
 def minio_all_model_timestamps() -> list[str]:
     """
     Lists all model timestamp IDs stored in the 'mpc' bucket on MinIO.
@@ -74,13 +75,14 @@ def minio_all_model_timestamps() -> list[str]:
     :raises ConnectionError: If MinIO is not reachable.
     """
     if not is_minio_online():
-        raise ConnectionError("MinIO server is not reachable.")
+        raise ConnectionError('MinIO server is not reachable.')
 
-    objects = list(client.list_objects("mpc", recursive=True))
+    objects = list(client.list_objects('mpc', recursive=True))
     if not objects:
         return []
 
-    return sorted({obj.object_name.split("/")[0] for obj in objects})
+    return sorted({obj.object_name.split('/')[0] for obj in objects})
+
 
 def minio_latest_model_timestamp_id() -> str:
     """
@@ -92,7 +94,7 @@ def minio_latest_model_timestamp_id() -> str:
     """
     timestamps = minio_all_model_timestamps()
     if not timestamps:
-        raise IndexError("No models found in MinIO.")
+        raise IndexError('No models found in MinIO.')
 
     return timestamps[-1]
 

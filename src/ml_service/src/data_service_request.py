@@ -1,7 +1,7 @@
 import os
 import socket
-
 from urllib.parse import urlparse
+
 import requests
 
 DATA_SERVICE_API_HOST = os.getenv('DATA_SERVICE_API_HOST', 'http://localhost:8777')
@@ -9,6 +9,7 @@ DATA_SERVICE_API_HOST = os.getenv('DATA_SERVICE_API_HOST', 'http://localhost:877
 parsed_url = urlparse(DATA_SERVICE_API_HOST)
 host = parsed_url.hostname
 port = parsed_url.port
+
 
 def is_data_service_online() -> bool:
     """

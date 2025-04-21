@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # Data Generator API
@@ -10,17 +8,17 @@ services:
     image: challenge_data_service:latest
     container_name: data_service
     ports:
-      - "8777:8777"
+      - '8777:8777'
 
   # MinIO Object Storage
   # For storing ML models
   minio:
     image: quay.io/minio/minio:latest
     container_name: minio_db
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ':9001'
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -33,7 +31,7 @@ services:
     image: postgres:latest
     container_name: postgre_db
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -49,7 +47,26 @@ services:
     image: challenge_ml_service:latest
     container_name: ml_service
     ports:
-      - "8000:8000"
+      - '8000:8000'
     depends_on:
       - data-service
       - minio
+      - postgres
+    environment:
+    - DATA_SERVICE_API_HOST=http://data-service:8777
+    - MINIO_HOST=minio:9000
+    - POSTGRES_HOST=postgres
+
+  # ML Microservice UI
+  # A Streamlit UI for the ML microservice
+  user-interface:
+    build:
+      context: ./src/user_interface
+    image: challenge_user_interface:latest
+    container_name: user_interface
+    ports:
+      - '8501:8501'
+    depends_on:
+      - ml-service
+    environment:
+    - ML_API_HOST=http://ml-service:8000

@@ -1,17 +1,16 @@
-from datetime import datetime
 import json
 import os
-from minio import Minio
-import joblib
 import socket
+from datetime import datetime
+
+import joblib
+from minio import Minio
 from sklearn.base import BaseEstimator
 
-client = Minio(
-    'minio:9000',
-    access_key='minioadmin',
-    secret_key='minioadmin',
-    secure=False
-)
+MINIO_HOST = os.getenv('MINIO_HOST', 'localhost:9000')
+
+client = Minio(MINIO_HOST, access_key='minioadmin', secret_key='minioadmin', secure=False)
+
 
 def is_minio_online() -> bool:
     """
@@ -39,7 +38,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
 
     if not is_minio_online():
         raise ConnectionError('MinIO server is not reachable.')
-    
+
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Create a bucket if it doesn't exist
@@ -49,7 +48,7 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     with open('model_file.joblib', mode='wb') as file_:
         joblib.dump(model, file_)
 
-    # Save model 
+    # Save model
     client.fput_object('mpc', f'{timestamp}/model.joblib', 'model_file.joblib')
 
     # If included, save model metrics & more information
@@ -68,24 +67,36 @@ def minio_save_model(model: BaseEstimator, metrics: dict | None) -> str:
     return timestamp
 
 
-def minio_latest_model_timestamp_id() -> str:
+def minio_all_model_timestamps() -> list[str]:
     """
-    Retrieves the latest timestamp ID stored in MinIO.
+    Lists all model timestamp IDs stored in the 'mpc' bucket on MinIO.
 
-    :return: Most recent timestamp ID, or None if no models exist.
+    :return: List of model timestamp strings.
     :raises ConnectionError: If MinIO is not reachable.
-    :raises IndexError: If no models are found in MinIO.
     """
-
     if not is_minio_online():
         raise ConnectionError('MinIO server is not reachable.')
 
     objects = list(client.list_objects('mpc', recursive=True))
     if not objects:
+        return []
+
+    return sorted({obj.object_name.split('/')[0] for obj in objects})
+
+
+def minio_latest_model_timestamp_id() -> str:
+    """
+    Retrieves the latest timestamp ID stored in MinIO.
+
+    :return: Most recent timestamp ID.
+    :raises ConnectionError: If MinIO is not reachable.
+    :raises IndexError: If no models are found in MinIO.
+    """
+    timestamps = minio_all_model_timestamps()
+    if not timestamps:
         raise IndexError('No models found in MinIO.')
 
-    timestamps = set(obj.object_name.split('/')[0] for obj in objects)
-    return sorted(timestamps)[-1]
+    return timestamps[-1]
 
 
 def minio_retreive_model(model_timestamp: str | None = None) -> BaseEstimator:
@@ -107,9 +118,9 @@ def minio_retreive_model(model_timestamp: str | None = None) -> BaseEstimator:
     # Download model file
     try:
         client.fget_object('mpc', f'{model_timestamp}/model.joblib', 'model_file.joblib')
-    except Exception as e:
+    except Exception:
         raise FileNotFoundError('There is no model with {model_timestamp} timestamp ID.')
-    
+
     model = joblib.load('model_file.joblib')
     os.remove('model_file.joblib')
 
